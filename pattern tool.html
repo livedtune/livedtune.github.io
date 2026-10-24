@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pattern Tool</title>
+<style>
+:root{--bg:#fff;--fg:#000;--line:#000;--mut:#444;--card:#fff;--acc:#000;--onacc:#fff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:#fff}
+*{box-sizing:border-box;border-radius:0!important}
+body{margin:0;background:#fff;color:#000;font:12px/1.3 ui-monospace,"SF Mono",Monaco,"Lucida Console","Courier New",monospace;height:100vh;height:100dvh;overflow:hidden}
+main{display:grid;grid-template-columns:360px minmax(0,1fr);grid-template-rows:auto auto auto auto minmax(0,1fr);height:100%;max-width:none;margin:0}
+main>h1{grid-column:1;grid-row:1;margin:0;padding:4px 8px;background:#000;color:#fff;font-size:12px;font-weight:400;letter-spacing:.12em;text-transform:uppercase}
+main>.sub{display:none}
+.tiles{grid-column:1;grid-row:3;display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px;margin:0}
+.tabs{grid-column:1;grid-row:4;display:flex;padding:0 6px;border-bottom:1px solid #000}
+.tabs button{flex:1;font:inherit;padding:5px 4px;background:#fff;color:#000;border:1px solid #000;border-bottom:0;margin-right:-1px;cursor:pointer}
+.tabs button.on{background:#000;color:#fff}
+.panel{grid-column:1;grid-row:5;overflow:auto;padding:8px 6px;margin:0;display:block}
+.stage{grid-column:2;grid-row:1/-1;position:relative;display:flex;align-items:center;justify-content:center;border:0;border-left:1px solid #000;background:#fff;overflow:hidden;padding:12px;margin:0}
+.stage.over{outline:2px dashed #000;outline-offset:-6px}
+#c{display:block;width:auto;height:auto;max-width:100%;max-height:calc(100dvh - 24px);background-color:#fff;background-image:linear-gradient(45deg,#ddd 25%,transparent 25%,transparent 75%,#ddd 75%),linear-gradient(45deg,#ddd 25%,transparent 25%,transparent 75%,#ddd 75%);background-size:16px 16px;background-position:0 0,8px 8px;outline:1px solid #000;-webkit-touch-callout:none}
+#c[width="10"]{display:none}
+#msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#000;padding:20px;pointer-events:none}
+.tile{position:relative;display:block;padding:6px 8px;min-height:0;cursor:pointer;background:#fff;border:1px dashed #000;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.tile:hover,.tile.over{background:#000;color:#fff}
+.tile b{display:block;font-size:12px;font-weight:700}
+.tile span{font-size:11px;color:#444;word-break:break-all}
+.tile:hover span,.tile.over span{color:#ccc}
+.ov{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0;border:0;padding:0;z-index:1}
+body[data-mode=text] #fB{pointer-events:none;display:none}
+.seg{position:relative;z-index:2;display:inline-flex;margin-left:6px;vertical-align:middle}
+.btn,.pick,.seg button{font:inherit;color:#000;background:#fff;border:1px solid #000;box-shadow:2px 2px 0 #000;padding:5px 10px;cursor:pointer;touch-action:manipulation}
+.btn:hover,.pick:hover,.seg button:hover{background:#000;color:#fff}
+.btn:active,.pick:active{box-shadow:none;transform:translate(2px,2px)}
+.seg button{padding:1px 8px;box-shadow:none;margin-right:-1px}
+.seg button.on{background:#000;color:#fff}
+.pick{display:inline-block;position:relative;overflow:hidden;margin-top:10px;padding:8px 16px;pointer-events:auto}
+.grp{display:none;flex-direction:column;gap:5px;padding:0;border:0;background:none}
+body[data-tab="0"] .grp:nth-child(1),body[data-tab="1"] .grp:nth-child(2),body[data-tab="2"] .grp:nth-child(3){display:flex}
+.grp h2{display:none}
+.grp .sub{margin:0;font-size:11px;color:#444}
+body:not([data-pm=grid]) .gt{display:none}
+body:not([data-pm=stamp]) .st{display:none}
+body[data-gr="0"] .gc{display:none}
+#cp{width:auto!important;height:auto!important;max-width:100%;max-height:140px;border:1px solid #000!important;display:block}
+label{display:grid;grid-template-columns:42% 1fr;align-items:center;gap:6px;font-size:12px;color:#000}
+label.chk{display:flex;flex-direction:row;align-items:center;gap:6px;min-height:20px}
+label:has(textarea),label:has(input[type=file]){display:flex;flex-direction:column;align-items:stretch;gap:2px}
+input[type=range]{width:100%;height:18px;accent-color:#000;touch-action:manipulation;margin:0}
+input[type=checkbox]{width:15px;height:15px;flex:none;accent-color:#000;margin:0}
+input[type=color]{border:1px solid #000;padding:0;background:#fff;height:22px}
+textarea,select,input[type=file]{font:inherit;padding:3px 4px;border:1px solid #000;background:#fff;color:#000;width:100%}
+textarea{resize:vertical}
+#shot{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.9);display:none;flex-direction:column;align-items:center;gap:12px;padding:max(16px,env(safe-area-inset-top,0px)) 16px max(16px,env(safe-area-inset-bottom,0px));overflow:auto}
+#shot img{max-width:100%;height:auto;background:#fff;-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto}
+#shot p{color:#fff;margin:0;text-align:center}
+body[data-mode=text] .img,body[data-mode=image] .txt{display:none}
+@media (max-width:800px){
+ body{height:auto;overflow:auto}
+ main{display:flex;flex-direction:column;height:auto}
+ .stage{order:-1;height:60vh;border-left:0;border-bottom:1px solid #000}
+ #c{max-height:56vh}
+ .panel{overflow:visible}
+ textarea,select,input[type=file]{font-size:16px}
+}
+</style>
+</head>
+<body data-mode="text">
+<main>
+<h1>Pattern Tool</h1>
+<p class="sub">Choose a pattern image, then a shape (text or a second image). Every piece of the pattern that the shape touches turns on.</p>
+<div class="tiles">
+ <label class="tile" id="tA"><b>1 · Pattern image</b><span id="nA">Tap to choose a photo or file</span><input type="file" id="fA" class="ov" accept="image/*"></label>
+ <label class="tile" id="tB"><b>2 · Shape <span class="seg"><button type="button" id="mT" class="on">Text</button><button type="button" id="mI">Image</button></span></b><span id="nB">Type your text below</span><input type="file" id="fB" class="ov" accept="image/*"></label>
+</div>
+<div class="tabs"><button type="button" class="on" data-t="0">Pattern</button><button type="button" data-t="1">Shape</button><button type="button" data-t="2">View</button></div>
+<div class="stage" id="stage"><canvas id="c" width="10" height="10"></canvas><div id="msg"><div><span id="msgt">Choose your pattern image to begin</span><br><label class="pick">Choose pattern image<input type="file" id="fA2" class="ov" accept="image/*"></label></div></div></div>
+<div class="panel">
+ <div class="grp"><h2>Pattern pieces</h2>
+  <canvas id='cp' style='display:none;width:100%;height:auto;border-radius:6px;cursor:crosshair;touch-action:none;border:1px solid var(--line)'></canvas>
+  <div class='sub' style='margin:0'>Drag on the preview above to crop to just the good part of the pattern. <button type='button' id='crst' style='font:inherit;font-size:.78rem;padding:2px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);cursor:pointer'>Reset crop</button></div>
+  <label>Pattern layout<select id='pm'><option value='single'>Single image</option><option value='grid'>Clean grid tiling</option><option value='stamp'>Random stamping</option></select></label>
+  <label class="gt">Grid tile size<input type='range' id='gts' min='20' max='700' value='200'></label>
+  <label class="gt">Grid tile offset left / right<input type='range' id='gtx' min='0' max='100' value='0'></label>
+  <label class="gt">Grid tile offset up / down<input type='range' id='gty' min='0' max='100' value='0'></label>
+  <label class="st">Largest stamp<input type="range" id="ts" min="20" max="500" value="90"></label>
+  <label class="st">Smallest stamp<input type="range" id="tmin" min="4" max="200" value="20"></label>
+  <label class="st">Number of stamps<input type="range" id="cnt" min="1" max="4000" value="1200"></label>
+  <label class="st">Focus on shape (rest fills the background)<input type="range" id="foc" min="0" max="100" value="80"></label>
+  <label class="st">Shape match (higher = crisper edges)<input type="range" id="fit" min="0" max="100" value="70"></label>
+  <label class="st">Overlap<input type="range" id="ovl" min="0" max="70" value="15"></label>
+  <label class="chk st"><input type="checkbox" id="rot"> Random rotation</label>
+  <button type="button" class="btn st" id="rs">Reshuffle positions</button>
+  <label>Find pieces by<select id="dm"><option value="dark">Dark shapes (dots, halftone, line art)</option><option value="color">Color regions (camo, flat color)</option></select></label>
+  <label>Threshold / detail<input type="range" id="k" min="2" max="255" value="128"></label>
+  <label class="chk"><input type="checkbox" id="inv"> Invert (light shapes)</label>
+  <label class="chk"><input type="checkbox" id="grid"> Break big pieces up with a grid</label>
+  <label class="gc">Grid cell size<input type="range" id="gs" min="10" max="400" value="120"></label>
+  <label class="gc">Grid offset left / right<input type="range" id="gox" min="0" max="100" value="0"></label>
+  <label class="gc">Grid offset up / down<input type="range" id="goy" min="0" max="100" value="0"></label>
+ </div>
+ <div class="grp"><h2>Shape</h2>
+  <div class="txt" style="display:contents">
+   <label>Text (new line = new row)<textarea id="t" rows="2">HELLO</textarea></label>
+   <label>Font<select id="fn"><option>Arial Black</option><option>Impact</option><option>Georgia</option><option>Courier New</option><option>Times New Roman</option><option>Verdana</option><option>Trebuchet MS</option><option>Comic Sans MS</option><option value="UserFont">Uploaded font</option></select></label>
+   <label>Upload a font (.ttf .otf .woff)<input type="file" id="ff"></label>
+   <label class="chk"><input type="checkbox" id="b" checked> Bold</label>
+  </div>
+  <div class="img" style="display:contents">
+   <label>Shape comes from<select id="ms"><option value="alpha">Transparency (PNG cutout)</option><option value="dark">Dark pixels</option><option value="light">Light pixels</option></select></label>
+   <label>Cutoff: which parts of the shape picture count as IN<input type="range" id="mt" min="1" max="254" value="128"></label>
+   <p class="sub" style="margin:0">Dark pixels: darker than the cutoff is in. Light pixels: lighter than the cutoff is in. Transparency: more solid than the cutoff is in. Turn on “Show shape cutoff” in View to see it.</p>
+  </div>
+  <label>Size<input type="range" id="f" min="3" max="200" value="60"></label>
+  <label>Move left / right<input type="range" id="x" min="-60" max="60" value="0"></label>
+  <label>Move up / down<input type="range" id="y" min="-60" max="60" value="0"></label>
+ </div>
+ <div class="grp"><h2>View</h2>
+  <label class="chk"><input type="checkbox" id="g" checked> Show faint off-pieces</label>
+  <label class="chk"><input type="checkbox" id="u"> Show shape underneath</label>
+  <label class="chk"><input type="checkbox" id="sm"> Show shape cutoff (red = in)</label>
+  <label>Fill the gaps (0 = off, higher = more solid)<input type="range" id="fill" min="0" max="100" value="0"></label>
+  <label class="chk">Fill color <input type="color" id="fc" value="#000000"></label>
+  <label class="chk"><input type="checkbox" id="bgon"> Background color <input type="color" id="bg" value="#ffffff"></label>
+  <button type="button" class="btn" id="save">Save / share image</button>
+  <p class="sub" style="margin:0">Opens a preview you can long-press to save to Photos, or share.</p>
+ </div>
+</div>
+</main>
+<div id="shot"><button type="button" class="btn" id="shotx">Close</button><p>Touch and hold the image, then choose “Add to Photos” or “Save to Files”.</p><img id="shotimg" alt="Pattern Reveal result"></div>
+<script>
+const $=id=>document.getElementById(id);
+const cv=$('c'),ctx=cv.getContext('2d');
+const pcv=document.createElement('canvas'),pc=pcv.getContext('2d',{willReadFrequently:true});
+const mcv=document.createElement('canvas'),mc=mcv.getContext('2d',{willReadFrequently:true});
+const tcv=document.createElement('canvas'),tc2=tcv.getContext('2d');
+let W=10,H=10,N=100,pat=null,shp=null,pd=null,labels=null,nL=0,mode='text',seed=20260418;
+function mul(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+function setSize(w,h){W=w;H=h;N=w*h;[cv,pcv,mcv,tcv].forEach(c=>{c.width=w;c.height=h})}
+function note(t){const m=$('msg');m.style.display='flex';$('msgt').textContent=t;clearTimeout(window._n);window._n=setTimeout(()=>{m.style.display=pat?'none':'flex';if(!pat)$('msgt').textContent='Choose your pattern image to begin'},3500)}
+function getFiles(dt){let f=[...dt.files];if(!f.length&&dt.items)f=[...dt.items].filter(i=>i.kind==='file').map(i=>i.getAsFile()).filter(Boolean);if(!f.length)note('No file came through. If you dragged from a web page, save the image first, then drag the saved file, or use click or paste.');return f}
+function readImg(f){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{im._n=f.name||'pasted image';r(im)};im.onerror=()=>{note('Could not read that image. Try a PNG or JPG.');r(null)};im.src=fr.result};fr.readAsDataURL(f)})}
+
+function setMode(m){mode=m;document.body.dataset.mode=m;$('mT').classList.toggle('on',m==='text');$('mI').classList.toggle('on',m==='image');
+  $('nB').textContent=m==='text'?'Type your text below':(shp?shp._n:'Tap to choose a shape image');refresh()}
+function setPat(im){pat=im;crop={x:0,y:0,w:1,h:1};$('nA').textContent=im._n;$('msg').style.display='none';
+  buildPat()}
+function buildPat(){drawCrop();const P=pat&&src();
+  if(!pat)return;
+  if($('pm').value==='grid'){gridTile(P)}else if($('pm').value==='stamp'){
+    setSize(1400,800);pc.clearRect(0,0,W,H);
+    const rnd=mul(seed),mx=Math.max(8,+$('ts').value),mn=Math.max(4,Math.min(mx,+$('tmin').value)),cnt=+$('cnt').value,foc=$('foc').value/100,thr=0.5+0.5*$('fit').value/100,pack=1-$('ovl').value/100,rot=$('rot').checked,ar=P.height/P.width;
+    const mk=hits(),S=[];for(let i=0;i<N;i++)if(mk[i])S.push(i);
+    const inShape=(x,y)=>{x=Math.round(x);y=Math.round(y);return x>=0&&y>=0&&x<W&&y<H&&mk[y*W+x]===1};
+    const sizes=[];for(let n=0;n<cnt;n++)sizes.push(mx*Math.pow(mn/mx,rnd()));
+    sizes.sort((a,b)=>b-a);
+    const cell=Math.max(16,mx),gw=Math.ceil(W/cell)+3,grid=new Map();
+    const near=(x,y,r)=>{const cx=Math.floor(x/cell),cy=Math.floor(y/cell);for(let j=cy-1;j<=cy+1;j++)for(let i=cx-1;i<=cx+1;i++){const a=grid.get((j+1)*gw+i+1);if(a)for(const p of a)if(Math.hypot(p.x-x,p.y-y)<(p.r+r)*pack)return true}return false};
+    for(const tw of sizes){
+      const inside=S.length>0&&rnd()<foc,th=tw*ar;let ok=false;
+      for(let t=0;t<30&&!ok;t++){
+        const a=rot?rnd()*Math.PI*2:0;
+        const hx=(Math.abs(tw*Math.cos(a))+Math.abs(th*Math.sin(a)))/2,hy=(Math.abs(tw*Math.sin(a))+Math.abs(th*Math.cos(a)))/2;
+        if(hx*2>W||hy*2>H)break;
+        let x,y;
+        if(inside){const p=S[Math.floor(rnd()*S.length)];x=Math.min(W-hx,Math.max(hx,p%W));y=Math.min(H-hy,Math.max(hy,Math.floor(p/W)))}
+        else{x=hx+rnd()*(W-2*hx);y=hy+rnd()*(H-2*hy)}
+        const r=(Math.sqrt(tw*th)+Math.max(tw,th))/4,rr=Math.max(tw,th)*0.4;
+        let c=inShape(x,y)?1:0;
+        for(let k=0;k<8;k++){const q=k*Math.PI/4;if(inShape(x+rr*Math.cos(q),y+rr*Math.sin(q)))c++}
+        c/=9;
+        if(inside?c<thr:c>1-thr)continue;
+        if(near(x,y,r))continue;
+        pc.save();pc.translate(x,y);pc.rotate(a);pc.drawImage(P,-tw/2,-th/2,tw,th);pc.restore();
+        const key=(Math.floor(y/cell)+1)*gw+Math.floor(x/cell)+1;let b=grid.get(key);if(!b){b=[];grid.set(key,b)}b.push({x,y,r});ok=true;
+      }
+    }
+  }else{
+    const s=1200/Math.max(P.width,P.height),w=Math.round(P.width*s),h=Math.round(P.height*s);
+    setSize(w,h);pc.clearRect(0,0,w,h);pc.drawImage(P,0,0,w,h);
+  }
+  pd=pc.getImageData(0,0,W,H).data;segment();render();
+}
+function setShp(im){shp=im;
+  const t=document.createElement('canvas');t.width=Math.min(im.width,200);t.height=Math.min(im.height,200);
+  const tc=t.getContext('2d');tc.drawImage(im,0,0,t.width,t.height);const d=tc.getImageData(0,0,t.width,t.height).data;
+  let tr=false;for(let i=3;i<d.length;i+=4)if(d[i]<250){tr=true;break}
+  $('ms').value=tr?'alpha':'dark';setMode('image')}
+async function take(files,target){
+  const fs=[...files].filter(f=>!f.type||f.type.startsWith('image/')||/\.(png|jpe?g|gif|webp|bmp|svg|avif|heic|heif)$/i.test(f.name));if(!fs.length){if([...files].length)note('That wasn’t an image file. Try PNG, JPG, WEBP or SVG.');return}
+  const im=(await Promise.all(fs.map(readImg))).filter(Boolean);if(!im.length)return;
+  if(target==='pat')setPat(im[0]);
+  else if(target==='shp')setShp(im[0]);
+  else if(im.length>1){setShp(im[1]);setPat(im[0])}
+  else if(!pat||mode==='text')setPat(im[0]);else setShp(im[0]);
+}
+
+let crop={x:0,y:0,w:1,h:1};
+function src(){const sx=Math.round(crop.x*pat.width),sy=Math.round(crop.y*pat.height),sw=Math.max(2,Math.round(crop.w*pat.width)),sh=Math.max(2,Math.round(crop.h*pat.height));
+  if(sx===0&&sy===0&&sw>=pat.width&&sh>=pat.height)return pat;
+  const c=document.createElement('canvas');c.width=sw;c.height=sh;c.getContext('2d').drawImage(pat,sx,sy,sw,sh,0,0,sw,sh);return c}
+function drawCrop(){
+  const c=$('cp');if(!pat){c.style.display='none';return}
+  c.style.display='block';
+  const s=Math.min(400/pat.width,300/pat.height);c.width=Math.max(1,Math.round(pat.width*s));c.height=Math.max(1,Math.round(pat.height*s));
+  const g=c.getContext('2d');g.drawImage(pat,0,0,c.width,c.height);
+  const X=crop.x*c.width,Y=crop.y*c.height,w=crop.w*c.width,h=crop.h*c.height;
+  g.fillStyle='rgba(0,0,0,.55)';g.fillRect(0,0,c.width,Y);g.fillRect(0,Y+h,c.width,c.height-Y-h);g.fillRect(0,Y,X,h);g.fillRect(X+w,Y,c.width-X-w,h);
+  g.strokeStyle='#fff';g.lineWidth=2;g.strokeRect(X,Y,w,h);
+}
+function gridTile(P){
+  setSize(1400,800);pc.clearRect(0,0,W,H);
+  const tw=Math.max(8,Math.round(+$('gts').value)),th=Math.max(8,Math.round(tw*P.height/P.width));
+  const x0=(Math.round(tw*$('gtx').value/100)%tw)-tw,y0=(Math.round(th*$('gty').value/100)%th)-th;
+  for(let y=y0;y<H;y+=th)for(let x=x0;x<W;x+=tw)pc.drawImage(P,x,y,tw,th);
+}
+function seg(key,skip){
+  labels=new Int32Array(N);nL=0;const st=new Int32Array(N);
+  for(let i=0;i<N;i++){
+    if(labels[i]||(skip&&!key[i]))continue;
+    nL++;let sp=0;st[sp++]=i;labels[i]=nL;const b=key[i];
+    while(sp){const p=st[--sp],x=p%W;
+      if(x>0&&!labels[p-1]&&key[p-1]===b){labels[p-1]=nL;st[sp++]=p-1}
+      if(x<W-1&&!labels[p+1]&&key[p+1]===b){labels[p+1]=nL;st[sp++]=p+1}
+      if(p>=W&&!labels[p-W]&&key[p-W]===b){labels[p-W]=nL;st[sp++]=p-W}
+      if(p<N-W&&!labels[p+W]&&key[p+W]===b){labels[p+W]=nL;st[sp++]=p+W}
+    }
+  }
+}
+function segment(){
+  if(!pd)return;
+  const key=new Int32Array(N),dk=$('dm').value==='dark',k=+$('k').value,inv=$('inv').checked,q=Math.max(2,Math.round(k/32));
+  for(let i=0;i<N;i++){const r=pd[i*4],g=pd[i*4+1],b=pd[i*4+2];
+    if(dk){const on=pd[i*4+3]>127&&(0.299*r+0.587*g+0.114*b<k);key[i]=(on!==inv)?1:0}
+    else key[i]=pd[i*4+3]>127?((r*q>>8)*q+(g*q>>8))*q+(b*q>>8)+1:0}
+  if($('grid').checked){
+    const gs=Math.max(4,+$('gs').value),ox=Math.round(gs*$('gox').value/100),oy=Math.round(gs*$('goy').value/100);
+    for(let y=0;y<H;y++){const cy=Math.floor((y+oy)/gs)*1000;
+      for(let x=0;x<W;x++){const i=y*W+x;if(key[i])key[i]=key[i]*1000000+cy+Math.floor((x+ox)/gs)}}
+  }
+  seg(key,true);
+}
+
+function drawText(c,col){
+  const lines=$('t').value.split('\n'),sz=$('f').value/100*H,lh=sz*1.05;
+  c.fillStyle=col;c.textAlign='center';c.textBaseline='middle';
+  c.font=($('b').checked?'900 ':'400 ')+sz+'px "'+$('fn').value+'",sans-serif';
+  const cx=W/2+W*$('x').value/100,cy=H/2+H*$('y').value/100-(lines.length-1)*lh/2;
+  lines.forEach((l,i)=>c.fillText(l,cx,cy+i*lh));
+}
+function drawImg(c){
+  if(!shp)return;const h=H*$('f').value/100,w=h*shp.width/shp.height;
+  c.drawImage(shp,W/2+W*$('x').value/100-w/2,H/2+H*$('y').value/100-h/2,w,h);
+}
+function hits(){
+  mc.clearRect(0,0,W,H);
+  if(mode==='text')drawText(mc,'#fff');else drawImg(mc);
+  const d=mc.getImageData(0,0,W,H).data,h=new Uint8Array(N);
+  if(mode==='text'){for(let i=0;i<N;i++)h[i]=d[i*4+3]>127?1:0;return h}
+  const ms=$('ms').value,t=+$('mt').value;
+  for(let i=0;i<N;i++){
+    if(d[i*4+3]<=(ms==='alpha'?t:127))continue;
+    if(ms==='alpha'){h[i]=1;continue}
+    const l=0.299*d[i*4]+0.587*d[i*4+1]+0.114*d[i*4+2];
+    h[i]=(ms==='dark'?l<t:l>=t)?1:0;
+  }
+  return h;
+}
+
+function boxAny(m,r,erode){
+  const w1=W+1,S=new Int32Array(w1*(H+1));
+  for(let y=0;y<H;y++){let row=0;for(let x=0;x<W;x++){row+=m[y*W+x];S[(y+1)*w1+x+1]=S[y*w1+x+1]+row}}
+  const o=new Uint8Array(N);
+  for(let y=0;y<H;y++){const y0=Math.max(0,y-r),y1=Math.min(H,y+r+1);
+    for(let x=0;x<W;x++){const x0=Math.max(0,x-r),x1=Math.min(W,x+r+1);
+      const s=S[y1*w1+x1]-S[y0*w1+x1]-S[y1*w1+x0]+S[y0*w1+x0];
+      o[y*W+x]=erode?(s===(x1-x0)*(y1-y0)?1:0):(s>0?1:0)}}
+  return o}
+function closeMask(m,r){return boxAny(boxAny(m,r,false),r,true)}
+function render(){
+  if(!pd||!labels)return;
+  const h=hits(),on=new Uint8Array(nL+1);
+  for(let i=0;i<N;i++)if(h[i])on[labels[i]]=1;
+  on[0]=0;
+  const gh=$('g').checked?34:0,img=pc.createImageData(W,H),o=img.data;
+  for(let i=0;i<N;i++){
+    const l=labels[i];if(!l)continue;const j=i*4;
+    o[j]=pd[j];o[j+1]=pd[j+1];o[j+2]=pd[j+2];o[j+3]=on[l]?255:gh;
+  }
+  const fr=+$('fill').value;
+  if(fr>0){
+    const m=new Uint8Array(N);for(let i=0;i<N;i++)m[i]=on[labels[i]];
+    const cl=closeMask(m,Math.max(1,Math.round(fr*0.6))),col=$('fc').value,R=parseInt(col.slice(1,3),16),G=parseInt(col.slice(3,5),16),B=parseInt(col.slice(5,7),16);
+    for(let i=0;i<N;i++)if(cl[i]&&!m[i]){const j=i*4;o[j]=R;o[j+1]=G;o[j+2]=B;o[j+3]=255}
+  }
+  pc.putImageData(img,0,0);
+  ctx.clearRect(0,0,W,H);
+  if($('bgon').checked){ctx.fillStyle=$('bg').value;ctx.fillRect(0,0,W,H)}
+  if($('u').checked){ctx.globalAlpha=.5;if(mode==='text')drawText(ctx,'#888');else drawImg(ctx);ctx.globalAlpha=1}
+  ctx.drawImage(pcv,0,0);
+  if($('sm').checked){const m=tc2.createImageData(W,H),q=m.data;for(let i=0;i<N;i++)if(h[i]){q[i*4]=255;q[i*4+1]=40;q[i*4+2]=40;q[i*4+3]=110}tc2.putImageData(m,0,0);ctx.drawImage(tcv,0,0)}
+}
+
+['g','u','sm','fill','fc','bg','bgon'].forEach(i=>$(i).addEventListener('input',render));
+let tm2;function refresh(){if($('pm').value==='stamp'){clearTimeout(tm2);tm2=setTimeout(buildPat,120)}else render()}
+['t','fn','b','f','x','y','ms','mt'].forEach(i=>$(i).addEventListener('input',refresh));
+let tm;['dm','k','inv','grid','gs','gox','goy'].forEach(i=>$(i).addEventListener('input',()=>{clearTimeout(tm);tm=setTimeout(()=>{segment();render()},100)}));
+['pm','gts','gtx','gty','ts','tmin','cnt','foc','fit','ovl','rot'].forEach(i=>$(i).addEventListener('input',()=>{clearTimeout(tm);tm=setTimeout(buildPat,100)}));
+$('rs').addEventListener('click',()=>{seed=Math.floor(Math.random()*1e9);buildPat()});
+let cd=null;const cp=$('cp');
+const cpt=e=>{const r=cp.getBoundingClientRect();return [Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),Math.min(1,Math.max(0,(e.clientY-r.top)/r.height))]};
+cp.addEventListener('pointerdown',e=>{cd=cpt(e);cp.setPointerCapture(e.pointerId)});
+cp.addEventListener('pointermove',e=>{if(!cd)return;const p=cpt(e);crop={x:Math.min(cd[0],p[0]),y:Math.min(cd[1],p[1]),w:Math.abs(p[0]-cd[0]),h:Math.abs(p[1]-cd[1])};drawCrop()});
+cp.addEventListener('pointerup',()=>{if(!cd)return;cd=null;if(crop.w<0.02||crop.h<0.02)crop={x:0,y:0,w:1,h:1};buildPat()});
+$('crst').addEventListener('click',()=>{crop={x:0,y:0,w:1,h:1};buildPat()});
+$('mT').addEventListener('click',e=>{e.stopPropagation();setMode('text')});
+$('mI').addEventListener('click',e=>{e.stopPropagation();setMode('image')});
+const fromInput=tg=>e=>{const fl=[...e.target.files];e.target.value='';if(fl.length)take(fl,tg)};
+$('fA').addEventListener('change',fromInput('pat'));
+$('fA2').addEventListener('change',fromInput('pat'));
+$('fB').addEventListener('change',fromInput('shp'));
+$('mT').addEventListener('click',e=>e.preventDefault());
+$('mI').addEventListener('click',e=>e.preventDefault());
+$('save').addEventListener('click',()=>{
+  if(!pat){note('Choose a pattern image first');return}
+  const url=cv.toDataURL('image/png');$('shotimg').src=url;$('shot').style.display='flex';
+});
+$('shotx').addEventListener('click',()=>{$('shot').style.display='none'});
+$('ff').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;
+  try{const face=new FontFace('UserFont',await f.arrayBuffer());await face.load();document.fonts.add(face);$('fn').value='UserFont';refresh()}
+  catch(err){alert('Could not load that font file')}});
+
+// drag and drop: tiles take their own file, anywhere else decides automatically
+[['tA','pat'],['tB','shp']].forEach(([id,tg])=>{const el=$(id);
+  el.addEventListener('dragover',e=>{e.preventDefault();e.stopPropagation();el.classList.add('over')});
+  el.addEventListener('dragleave',()=>el.classList.remove('over'));
+  el.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();el.classList.remove('over');take(getFiles(e.dataTransfer),tg)});
+});
+window.addEventListener('dragenter',e=>e.preventDefault());
+window.addEventListener('dragover',e=>{e.preventDefault();if(e.dataTransfer)e.dataTransfer.dropEffect='copy';$('stage').classList.add('over')});
+window.addEventListener('dragleave',e=>{if(!e.relatedTarget)$('stage').classList.remove('over')});
+window.addEventListener('drop',e=>{e.preventDefault();$('stage').classList.remove('over');take(getFiles(e.dataTransfer))});
+window.addEventListener('paste',e=>{if(e.clipboardData&&e.clipboardData.files.length)take(e.clipboardData.files)});
+const BD=document.body;
+function uiPm(){BD.dataset.pm=$('pm').value}
+$('pm').addEventListener('input',uiPm);uiPm();
+function uiGr(){BD.dataset.gr=$('grid').checked?'1':'0'}
+$('grid').addEventListener('input',uiGr);uiGr();
+BD.dataset.tab='0';
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{BD.dataset.tab=b.dataset.t;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b))}));
+</script>
+</body>
+</html>
